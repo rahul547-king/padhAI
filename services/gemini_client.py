@@ -3,8 +3,7 @@ import os
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-model = genai.GenerativeModel("gemini-pro")
-
+model = genai.GenerativeModel("models/gemini-pro")
 
 def generate_answer(prompt: str) -> str:
     response = model.generate_content(prompt)

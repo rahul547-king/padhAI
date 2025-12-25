@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PadhAI • Grok Inspired</title>
+    <style>
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #111111;
+            --bg-input: #1f1f1f;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #707070;
+            --accent-purple: #c084fc;
+            --accent-purple-hover: #a855f7;
+            --border: #242424;
+            --hover-bg: #1a1a1a;
+            --active-bg: #2a2a2a;
+            --scrollbar: #333333;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+        }
+
+        .logo {
+            padding: 0 24px 32px;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--accent-purple);
+            letter-spacing: -0.5px;
+        }
+
+        .new-chat-btn {
+            margin: 0 20px 28px;
+            padding: 14px 18px;
+            background: transparent;
+            border: 1.5px solid var(--accent-purple);
+            border-radius: 16px;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .new-chat-btn:hover {
+            background: var(--accent-purple);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(160, 84, 252, 0.2);
+        }
+
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 20px;
+        }
+
+        .chat-history::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-history::-webkit-scrollbar-thumb {
+            background: var(--scrollbar);
+            border-radius: 3px;
+        }
+
+        .history-section {
+            margin-bottom: 32px;
+        }
+
+        .history-date {
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 4px 0;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .history-item {
+            padding: 14px 16px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background 0.25s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .history-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .history-item.active {
+            background: var(--active-bg);
+        }
+
+        .history-icon {
+            font-size: 20px;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+
+        .history-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-title {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-preview {
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 1.3;
+        }
+
+        /* Main Chat Area */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+        }
+
+        .messages {
+            flex: 1;
+            padding: 32px 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: var(--scrollbar);
+            border-radius: 4px;
+        }
+
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 19px;
+            text-align: center;
+            padding: 60px;
+        }
+
+        .empty-state h3 {
+            font-size: 32px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .empty-state p {
+            max-width: 600px;
+            line-height: 1.7;
+            font-size: 17px;
+        }
+
+        .message {
+            max-width: 800px;
+            padding: 18px 24px;
+            border-radius: 20px;
+            line-height: 1.6;
+            font-size: 16.5px;
+            align-self: flex-start;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--accent-purple);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 16px rgba(160, 84, 252, 0.3);
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        .typing-dots span {
+            width: 9px;
+            height: 9px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 20px 40px 32px;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: flex-end;
+            gap: 16px;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(160, 84, 252, 0.15);
+        }
+
+        #userInput {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 16.5px;
+            font-family: inherit;
+            resize: none;
+            min-height: 28px;
+            max-height: 140px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        #userInput::placeholder {
+            color: var(--text-muted);
+        }
+
+        .attach-btn, .send-btn {
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .attach-btn:hover, .send-btn:hover:not(:disabled) {
+            background: var(--hover-bg);
+            transform: scale(1.05);
+        }
+
+        .send-btn {
+            background: var(--accent-purple);
+            color: white;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background: var(--accent-purple-hover);
+            transform: scale(1.1);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        #pdfInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">PadhAI</div>
+
+        <div class="new-chat-btn" onclick="startNewChat()">
+            + New chat
+        </div>
+
+        <div class="chat-history" id="chatHistory">
+            <!-- History loaded here -->
+        </div>
+    </div>
+
+    <!-- Main Chat -->
+    <div class="chat-container">
+        <div class="messages" id="messages">
+            <div class="empty-state" id="emptyState">
+                <h3>Welcome to PadhAI</h3>
+                <p>Upload a PDF and start asking questions about it.<br>
+                Your intelligent study companion, inspired by Grok — ready to help you master any subject.</p>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <label class="attach-btn" title="Upload PDF">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <input type="file" id="pdfInput" accept="application/pdf">
+            </label>
+
+            <div class="input-wrapper">
+                <textarea id="userInput" placeholder="Ask something about the PDF..." rows="1" autocomplete="off"></textarea>
+                <button class="send-btn" onclick="sendMessage()" id="sendBtn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M22 2L2 12.5l20 9.5L22 2z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // All previous JS remains the same, only minor tweaks for new classes
+    const messagesDiv = document.getElementById("messages");
+    let emptyState = document.getElementById("emptyState");
+    const userInput = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const chatHistoryDiv = document.getElementById("chatHistory");
+    let typingMessage = null;
+    let currentChatIndex = -1;
+
+    function autoResize() {
+        userInput.style.height = 'auto';
+        userInput.style.height = `${Math.min(userInput.scrollHeight, 140)}px`;
+    }
+
+    userInput.addEventListener('input', autoResize);
+
+    function addMessage(text, sender) {
+        if (emptyState) {
+            emptyState.remove();
+            emptyState = null;
+        }
+
+        const div = document.createElement("div");
+        div.className = `message ${sender}`;
+        div.textContent = text;
+        messagesDiv.appendChild(div);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        return div;
+    }
+
+    function addTypingIndicator() {
+        if (typingMessage) return;
+
+        typingMessage = document.createElement("div");
+        typingMessage.className = "message bot";
+        typingMessage.innerHTML = `
+            <div class="typing-indicator">
+                <span>PadhAI is thinking</span>
+                <div class="typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        `;
+        messagesDiv.appendChild(typingMessage);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+        if (typingMessage) {
+            typingMessage.remove();
+            typingMessage = null;
+        }
+    }
+
+    async function loadChatHistory() {
+        try {
+            const res = await fetch("/chat/history");
+            const history = await res.json();
+
+            chatHistoryDiv.innerHTML = '';
+
+            if (history.length === 0) {
+                chatHistoryDiv.innerHTML = '<div style="color: var(--text-secondary); font-size: 14px; text-align: center; padding: 40px;">No conversations yet</div>';
+                return;
+            }
+
+            const todaySection = document.createElement('div');
+            todaySection.className = 'history-section';
+            todaySection.innerHTML = '<div class="history-date">Today</div>';
+
+            history.slice().reverse().forEach((item, index) => {
+                const revIndex = history.length - 1 - index;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'history-item';
+                if (revIndex === currentChatIndex) itemDiv.classList.add('active');
+
+                const preview = item.question.length > 60 ? item.question.substring(0, 60) + '...' : item.question;
+
+                itemDiv.innerHTML = `
+                    <div class="history-icon">📄</div>
+                    <div class="history-content">
+                        <div class="history-title">PDF Question</div>
+                        <div class="history-preview">${preview}</div>
+                    </div>
+                `;
+
+                itemDiv.onclick = () => loadChat(revIndex);
+                todaySection.appendChild(itemDiv);
+            });
+
+            chatHistoryDiv.appendChild(todaySection);
+        } catch (err) {
+            console.error('Failed to load history');
+        }
+    }
+
+    async function loadChat(index) {
+        if (index === currentChatIndex) return;
+
+        messagesDiv.innerHTML = '';
+        emptyState = null;
+
+        try {
+            const res = await fetch("/chat/history");
+            const history = await res.json();
+
+            if (index >= history.length || index < 0) return;
+
+            const pairs = history.slice(0, index + 1);
+
+            pairs.forEach(pair => {
+                addMessage(pair.question, 'user');
+                addMessage(pair.answer, 'bot');
+            });
+
+            currentChatIndex = index;
+            loadChatHistory();
+        } catch (err) {
+            console.error('Failed to load chat');
+        }
+    }
+
+    function startNewChat() {
+        messagesDiv.innerHTML = '';
+
+        const newEmpty = document.createElement("div");
+        newEmpty.className = "empty-state";
+        newEmpty.id = "emptyState";
+        newEmpty.innerHTML = `
+            <h3>New chat started</h3>
+            <p>Upload a PDF or ask anything — your AI study assistant is ready.</p>
+        `;
+        messagesDiv.appendChild(newEmpty);
+        emptyState = newEmpty;
+
+        currentChatIndex = -1;
+        userInput.value = '';
+        autoResize();
+        userInput.focus();
+        loadChatHistory();
+    }
+
+    async function uploadPDF() {
+        const fileInput = document.getElementById("pdfInput");
+        if (!fileInput.files.length) return;
+
+        const fileName = fileInput.files[0].name;
+        addMessage(`Uploading "${fileName}"...`, "bot");
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        try {
+            const res = await fetch("/upload/pdf", { method: "POST", body: formData });
+            const data = await res.json();
+            addMessage(data.message || "PDF uploaded & processed successfully!", "bot");
+        } catch (err) {
+            addMessage("Failed to upload PDF. Please try again.", "bot");
+        }
+
+        fileInput.value = "";
+    }
+
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        addMessage(text, "user");
+        userInput.value = "";
+        autoResize();
+        sendBtn.disabled = true;
+        addTypingIndicator();
+
+        try {
+            const res = await fetch("/chat/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question: text })
+            });
+
+            const data = await res.json();
+            removeTypingIndicator();
+            addMessage(data.answer || "No response from server.", "bot");
+            loadChatHistory();
+        } catch (err) {
+            removeTypingIndicator();
+            addMessage("Error: Could not connect to server.", "bot");
+        } finally {
+            sendBtn.disabled = false;
+            userInput.focus();
+        }
+    }
+
+    userInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    document.querySelector(".attach-btn").addEventListener("click", () => {
+        document.getElementById("pdfInput").click();
+    });
+
+    document.getElementById("pdfInput").addEventListener("change", uploadPDF);
+
+    loadChatHistory();
+    userInput.focus();
+    autoResize();
+</script>
+
+</body>
+</html>
