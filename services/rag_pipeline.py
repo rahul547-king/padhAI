@@ -1,36 +1,43 @@
 from services.local_embeddings import get_embedding
 from services.vector_store import query_vectors
 from services.gemini_client import generate_answer
+import re
 
 def ask_question(question: str) -> str:
-    # 1️⃣ Embed the question
+    # 1️⃣ Embed question
     query_embedding = get_embedding(question)
 
-    # 2️⃣ Retrieve relevant chunks
-    docs = query_vectors(query_embedding, top_k=3)
+    # 2️⃣ Retrieve MORE relevant chunks
+    docs = query_vectors(query_embedding, top_k=4)
 
     if not docs:
         return "Answer not found in the document."
 
-    # 3️⃣ Build context
+    # 3️⃣ Combine context properly
     context = "\n\n".join(docs)
 
-    # 4️⃣ 🔥 QUESTION-AWARE PROMPT (THIS IS THE FIX)
+    # 4️⃣ STRONG PROMPT (🔥 THIS IS THE KEY)
     prompt = f"""
-You are a study assistant.
-Answer the question STRICTLY using the document context below.
+You are an AI study assistant.
 
-Document context:
+Answer the question ONLY using the given document context.
+Give a clear, medium-length explanation (5–8 lines).
+If it is a definition, explain it properly.
+If it is a purpose/objective question, give points.
+
+Document Context:
 {context}
 
 Question:
 {question}
 
 Rules:
-- Answer only what is asked
-- Be concise and clear
-- If answer is not in context, say: "Answer not found in the document."
+- Do NOT say "Answer not found" unless context is totally missing
+- Do NOT give one-line answers
+- Explain like a university exam answer
 """
 
-    # 5️⃣ Let Gemini think
-    return generate_answer(prompt)
+    # 5️⃣ Gemini generates final answer
+    answer = generate_answer(prompt)
+
+    return answer.strip()
