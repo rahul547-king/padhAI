@@ -1,46 +1,59 @@
-import chromadb
+import os
 import uuid
+import chromadb
+from config import Config
 
-# 🔹 Single persistent client
-client = chromadb.Client()
+os.makedirs(Config.CHROMA_PATH, exist_ok=True)
+client = chromadb.PersistentClient(path=Config.CHROMA_PATH)
 
-COLLECTION_NAME = "pdf_docs"
+def _collection_name(uid: str) -> str:
+    return f"user_{uid}"
 
+def get_collection(uid: str):
+    return client.get_or_create_collection(name=_collection_name(uid))
 
-def get_collection():
-    return client.get_or_create_collection(name=COLLECTION_NAME)
-
-
-def clear_collection():
-    try:
-        client.delete_collection(COLLECTION_NAME)
-    except:
-        pass
-
-
-def store_chunks(chunks, embeddings):
-    collection = get_collection()
-
+def store_chunks(uid: str, chunks, embeddings, metadatas):
+    """
+    metadatas must be non-empty dicts for Chroma.
+    """
+    col = get_collection(uid)
     ids = [str(uuid.uuid4()) for _ in chunks]
+    col.add(documents=chunks, embeddings=embeddings, ids=ids, metadatas=metadatas)
 
-    collection.add(
-        documents=chunks,
-        embeddings=embeddings,
-        ids=ids
-    )
-
-
-# ✅ REAL FIX: embedding-based query + safe n_results
-def query_vectors(query_embedding, top_k=3):
-    collection = get_collection()
-
-    total_docs = collection.count()
-    if total_docs == 0:
+def query_vectors(uid: str, query_embedding, top_k=10, where=None, include_embeddings=True):
+    col = get_collection(uid)
+    if col.count() == 0:
         return []
 
-    results = collection.query(
-        query_embeddings=[query_embedding],   # 🔥 CORRECT
-        n_results=min(top_k, total_docs)       # 🔥 VERY IMPORTANT
+    includes = ["documents", "metadatas", "distances"]
+    if include_embeddings:
+        includes.append("embeddings")
+
+    res = col.query(
+        query_embeddings=[query_embedding],
+        n_results=min(top_k, col.count()),
+        where=where,
+        include=includes
     )
 
-    return results["documents"][0]
+    docs = res.get("documents", [[]])[0]
+    metas = res.get("metadatas", [[]])[0]
+    dists = res.get("distances", [[]])[0]
+    embs = res.get("embeddings", [[]])[0] if include_embeddings else [None] * len(docs)
+
+    results = []
+    for i in range(len(docs)):
+        results.append({
+            "text": docs[i],
+            "metadata": metas[i] or {},
+            "distance": dists[i] if i < len(dists) else None,
+            "embedding": embs[i] if i < len(embs) else None
+        })
+    return results
+
+def clear_user(uid: str):
+    name = _collection_name(uid)
+    try:
+        client.delete_collection(name)
+    except Exception:
+        pass

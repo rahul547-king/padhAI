@@ -1,11 +1,14 @@
 from flask import Blueprint, request, jsonify
-from services.pdf_loader import extract_text
-from services.text_chunker import chunk_text
-from services.vector_store import store_chunks, clear_collection
-from services.local_embeddings import get_embedding
+import uuid
 
-# ✅ url_prefix FIXED
+from services.pdf_loader import extract_pages
+from services.text_chunker import chunk_pages
+from services.local_embeddings import get_embedding
+from services.vector_store import store_chunks
+
 upload_bp = Blueprint("upload", __name__, url_prefix="/upload")
+
+DEMO_UID = "demo_user"
 
 @upload_bp.route("/pdf", methods=["POST"])
 def upload_pdf():
@@ -13,26 +16,36 @@ def upload_pdf():
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files["file"]
+    if not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are allowed"}), 400
 
-    # 🔥 Remove old PDF data
-    clear_collection()
+    doc_id = str(uuid.uuid4())
 
-    # 📄 Extract text
-    text = extract_text(file)
+    pages = extract_pages(file)
+    chunks, metas = chunk_pages(pages, chunk_size=500, overlap=60)
 
-    if not text or not text.strip():
-        return jsonify({"error": "No readable text found in PDF"}), 400
+    if not chunks:
+        return jsonify({"error": "Could not extract text from PDF"}), 400
 
-    # ✂️ Chunk text
-    chunks = chunk_text(text)
+    chunks = chunks[:200]  # safe cap
+    metas = metas[:200]
 
-    # ⚡ Prevent repetition & slowness
-    chunks = chunks[:100]
+    embeddings = [get_embedding(c) for c in chunks]
 
-    # 🧠 Local embeddings
-    embeddings = [get_embedding(chunk) for chunk in chunks]
+    # ✅ make metadatas non-empty + include doc_id/source
+    metadatas = []
+    for m in metas:
+        metadatas.append({
+            "doc_id": doc_id,
+            "source": file.filename,
+            "page": int(m.get("page", 0)),
+            "chunk_index": int(m.get("chunk_index", 0))
+        })
 
-    # 📦 Store vectors
-    store_chunks(chunks, embeddings)
+    store_chunks(DEMO_UID, chunks, embeddings, metadatas)
 
-    return jsonify({"message": "PDF uploaded & processed successfully"})
+    return jsonify({
+        "message": "PDF uploaded & processed successfully!",
+        "doc_id": doc_id,
+        "filename": file.filename
+    })

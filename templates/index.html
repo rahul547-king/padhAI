@@ -11,7 +11,7 @@
             --bg-tertiary: #111111;
             --bg-input: #1f1f1f;
             --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
+            --text-secondary: #a85b5b;
             --text-muted: #707070;
             --accent-purple: #c084fc;
             --accent-purple-hover: #a855f7;
@@ -135,15 +135,6 @@
             text-overflow: ellipsis;
         }
 
-        .history-preview {
-            font-size: 13.5px;
-            color: var(--text-secondary);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            line-height: 1.3;
-        }
-
         /* Main Chat Area */
         .chat-container {
             flex: 1;
@@ -205,6 +196,7 @@
             background: var(--bg-tertiary);
             border: 1px solid var(--border);
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            white-space: normal;
         }
 
         .message.user {
@@ -213,6 +205,20 @@
             color: white;
             border: none;
             box-shadow: 0 4px 16px rgba(160, 84, 252, 0.3);
+        }
+
+        /* ✅ ChatGPT-like formatting for bot messages */
+        .message.bot ul {
+            margin: 10px 0 10px 20px;
+            padding: 0;
+        }
+
+        .message.bot li {
+            margin: 6px 0;
+        }
+
+        .message.bot strong {
+            font-weight: 800;
         }
 
         /* Typing Indicator */
@@ -224,12 +230,23 @@
             color: var(--text-secondary);
         }
 
+        .typing-dots {
+            display: inline-flex;
+            gap: 6px;
+        }
+
         .typing-dots span {
             width: 9px;
             height: 9px;
             background: var(--text-muted);
             border-radius: 50%;
             animation: typing 1.4s infinite ease-in-out;
+            display: inline-block;
+        }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
         }
 
         /* Input Area */
@@ -328,9 +345,7 @@
             + New chat
         </div>
 
-        <div class="chat-history" id="chatHistory">
-            <!-- History loaded here -->
-        </div>
+        <div class="chat-history" id="chatHistory"></div>
     </div>
 
     <!-- Main Chat -->
@@ -339,40 +354,68 @@
             <div class="empty-state" id="emptyState">
                 <h3>Welcome to PadhAI</h3>
                 <p>Upload a PDF and start asking questions about it.<br>
-                Your intelligent study companion, inspired by Grok — ready to help you master any subject.</p>
+                Your intelligent study companion, ready to help you master any subject.</p>
             </div>
         </div>
 
         <div class="input-area">
-            <label class="attach-btn" title="Upload PDF">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-                <input type="file" id="pdfInput" accept="application/pdf">
-            </label>
 
-            <div class="input-wrapper">
-                <textarea id="userInput" placeholder="Ask something about the PDF..." rows="1" autocomplete="off"></textarea>
-                <button class="send-btn" onclick="sendMessage()" id="sendBtn">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M22 2L2 12.5l20 9.5L22 2z"></path>
-                    </svg>
-                </button>
-            </div>
-        </div>
+    <!-- Upload PDF -->
+    <button class="attach-btn" id="uploadBtn" title="Upload PDF">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+    </button>
+
+    <input type="file" id="pdfInput" accept="application/pdf" hidden>
+
+    <!-- Quiz Button -->
+    <button class="new-chat-btn" onclick="generateQuiz()" title="Generate Quiz">
+        📝 Quiz
+    </button>
+
+    <!-- Message Input -->
+    <div class="input-wrapper">
+        <textarea
+            id="userInput"
+            placeholder="Ask something about the PDF..."
+            rows="1"
+            autocomplete="off"></textarea>
+
+        <button class="send-btn" id="sendBtn">
+            <svg width="22" height="22" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M22 2L2 12.5l20 9.5L22 2z"></path>
+            </svg>
+        </button>
     </div>
+</div>
+
 
 <script>
-    // All previous JS remains the same, only minor tweaks for new classes
     const messagesDiv = document.getElementById("messages");
     let emptyState = document.getElementById("emptyState");
     const userInput = document.getElementById("userInput");
     const sendBtn = document.getElementById("sendBtn");
     const chatHistoryDiv = document.getElementById("chatHistory");
+
+    sendBtn.addEventListener("click", sendMessage);
+
     let typingMessage = null;
     let currentChatIndex = -1;
+    let currentChatId = null;
+    let currentDocId = null;
+
+    async function getAuthHeaders(isJson = true) {
+        const token = localStorage.getItem("firebaseToken");
+        const headers = {};
+        if (isJson) headers["Content-Type"] = "application/json";
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        return headers;
+    }
 
     function autoResize() {
         userInput.style.height = 'auto';
@@ -380,6 +423,51 @@
     }
 
     userInput.addEventListener('input', autoResize);
+
+    // ✅ Render bot answer like ChatGPT (line breaks + bullets + **bold**)
+    function renderChatGPTStyle(text) {
+        const escapeHtml = (s) =>
+            s.replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;");
+
+        let t = escapeHtml(text);
+
+        // **bold**
+        t = t.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+
+        const lines = t.split("\n");
+        let html = "";
+        let inList = false;
+
+        for (let line of lines) {
+            const trimmed = line.trim();
+
+            if (/^-\s+/.test(trimmed)) {
+                if (!inList) {
+                    html += "<ul>";
+                    inList = true;
+                }
+                html += `<li>${trimmed.replace(/^-\s+/, "")}</li>`;
+            } else {
+                if (inList) {
+                    html += "</ul>";
+                    inList = false;
+                }
+
+                if (/^[A-Za-z0-9 \/\-()]+:\s*$/.test(trimmed)) {
+                    html += `<div style="font-weight:800; margin-top:10px;">${trimmed}</div>`;
+                } else if (trimmed === "") {
+                    html += `<div style="height:10px;"></div>`;
+                } else {
+                    html += `<div>${trimmed}</div>`;
+                }
+            }
+        }
+
+        if (inList) html += "</ul>";
+        return html;
+    }
 
     function addMessage(text, sender) {
         if (emptyState) {
@@ -389,7 +477,14 @@
 
         const div = document.createElement("div");
         div.className = `message ${sender}`;
-        div.textContent = text;
+
+        // ✅ user plain, bot formatted
+        if (sender === "bot") {
+            div.innerHTML = renderChatGPTStyle(text);
+        } else {
+            div.textContent = text;
+        }
+
         messagesDiv.appendChild(div);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
         return div;
@@ -421,113 +516,153 @@
 
     async function loadChatHistory() {
         try {
-            const res = await fetch("/chat/history");
+            const res = await fetch("/chat/history", { headers: await getAuthHeaders(false) });
             const history = await res.json();
 
-            chatHistoryDiv.innerHTML = '';
+            chatHistoryDiv.innerHTML = "";
 
-            if (history.length === 0) {
-                chatHistoryDiv.innerHTML = '<div style="color: var(--text-secondary); font-size: 14px; text-align: center; padding: 40px;">No conversations yet</div>';
+            if (!Array.isArray(history) || history.length === 0) {
+                chatHistoryDiv.innerHTML = `
+                    <div style="color:#777; padding:20px; text-align:center">
+                        No chats yet
+                    </div>`;
                 return;
             }
 
-            const todaySection = document.createElement('div');
-            todaySection.className = 'history-section';
-            todaySection.innerHTML = '<div class="history-date">Today</div>';
+            const section = document.createElement("div");
+            section.className = "history-section";
+            section.innerHTML = `<div class="history-date">Chats</div>`;
 
-            history.slice().reverse().forEach((item, index) => {
-                const revIndex = history.length - 1 - index;
+            history.forEach((chat, index) => {
+                const div = document.createElement("div");
+                div.className = "history-item";
+                if (index === currentChatIndex) div.classList.add("active");
 
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'history-item';
-                if (revIndex === currentChatIndex) itemDiv.classList.add('active');
-
-                const preview = item.question.length > 60 ? item.question.substring(0, 60) + '...' : item.question;
-
-                itemDiv.innerHTML = `
+                div.innerHTML = `
                     <div class="history-icon">📄</div>
                     <div class="history-content">
-                        <div class="history-title">PDF Question</div>
-                        <div class="history-preview">${preview}</div>
+                        <div class="history-title">${chat.title}</div>
                     </div>
                 `;
 
-                itemDiv.onclick = () => loadChat(revIndex);
-                todaySection.appendChild(itemDiv);
+                div.onclick = () => loadChat(index);
+                section.appendChild(div);
             });
 
-            chatHistoryDiv.appendChild(todaySection);
+            chatHistoryDiv.appendChild(section);
         } catch (err) {
-            console.error('Failed to load history');
+            console.error("Sidebar load failed", err);
         }
     }
 
     async function loadChat(index) {
-        if (index === currentChatIndex) return;
-
-        messagesDiv.innerHTML = '';
+        messagesDiv.innerHTML = "";
         emptyState = null;
 
         try {
-            const res = await fetch("/chat/history");
+            const res = await fetch("/chat/history", { headers: await getAuthHeaders(false) });
             const history = await res.json();
 
-            if (index >= history.length || index < 0) return;
+            if (!history[index]) return;
 
-            const pairs = history.slice(0, index + 1);
+            const chat = history[index];
 
-            pairs.forEach(pair => {
-                addMessage(pair.question, 'user');
-                addMessage(pair.answer, 'bot');
+            chat.messages.forEach(msg => {
+                addMessage(msg.content, msg.role === "user" ? "user" : "bot");
             });
 
             currentChatIndex = index;
+            currentChatId = chat.id;
+
             loadChatHistory();
         } catch (err) {
-            console.error('Failed to load chat');
+            console.error("Chat load failed", err);
         }
     }
 
     function startNewChat() {
-        messagesDiv.innerHTML = '';
+        messagesDiv.innerHTML = "";
 
         const newEmpty = document.createElement("div");
         newEmpty.className = "empty-state";
         newEmpty.id = "emptyState";
         newEmpty.innerHTML = `
             <h3>New chat started</h3>
-            <p>Upload a PDF or ask anything — your AI study assistant is ready.</p>
+            <p>Upload a PDF or ask anything.</p>
         `;
+
         messagesDiv.appendChild(newEmpty);
         emptyState = newEmpty;
 
+        currentChatId = null;
         currentChatIndex = -1;
-        userInput.value = '';
+
+        loadChatHistory();
+
+        userInput.value = "";
         autoResize();
         userInput.focus();
-        loadChatHistory();
     }
 
     async function uploadPDF() {
         const fileInput = document.getElementById("pdfInput");
         if (!fileInput.files.length) return;
 
-        const fileName = fileInput.files[0].name;
-        addMessage(`Uploading "${fileName}"...`, "bot");
+        const file = fileInput.files[0];
+        addMessage(`Uploading "${file.name}"...`, "bot");
 
         const formData = new FormData();
-        formData.append("file", fileInput.files[0]);
+        formData.append("file", file);
 
         try {
-            const res = await fetch("/upload/pdf", { method: "POST", body: formData });
+            const res = await fetch("/upload/pdf", {
+                method: "POST",
+                headers: await getAuthHeaders(false),
+                body: formData
+            });
+
+            if (!res.ok) throw new Error("Upload failed");
             const data = await res.json();
-            addMessage(data.message || "PDF uploaded & processed successfully!", "bot");
+
+            if (data.doc_id) currentDocId = data.doc_id;
+
+            addMessage(`PDF "${data.filename || file.name}" uploaded and selected.`, "bot");
         } catch (err) {
             addMessage("Failed to upload PDF. Please try again.", "bot");
+            console.error(err);
         }
 
         fileInput.value = "";
     }
+    async function generateQuiz() {
+    if (!currentDocId) {
+        addMessage("Please upload and select a PDF first.", "bot");
+        return;
+    }
+
+    addMessage("Generating quiz from the selected PDF...", "bot");
+    addTypingIndicator();
+
+    try {
+        const res = await fetch("/chat/quiz", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                doc_id: currentDocId
+            })
+        });
+
+        const data = await res.json();
+        removeTypingIndicator();
+
+        addMessage(data.quiz || "Failed to generate quiz.", "bot");
+
+    } catch (err) {
+        removeTypingIndicator();
+        addMessage("Error generating quiz.", "bot");
+        console.error(err);
+    }
+}
 
     async function sendMessage() {
         const text = userInput.value.trim();
@@ -542,28 +677,41 @@
         try {
             const res = await fetch("/chat/", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question: text })
+                headers: await getAuthHeaders(true),
+                body: JSON.stringify({
+                    question: text,
+                    chat_id: currentChatId,
+                    doc_id: currentDocId
+                })
             });
 
             const data = await res.json();
             removeTypingIndicator();
+
+            if (!res.ok) {
+                addMessage(data.error || "Server error.", "bot");
+                return;
+            }
+
             addMessage(data.answer || "No response from server.", "bot");
+
+            if (data.chat_id) currentChatId = data.chat_id;
+
             loadChatHistory();
         } catch (err) {
             removeTypingIndicator();
             addMessage("Error: Could not connect to server.", "bot");
+            console.error(err);
         } finally {
             sendBtn.disabled = false;
             userInput.focus();
         }
     }
 
-    userInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
+    document.addEventListener("DOMContentLoaded", () => {
+        loadChatHistory();
+        userInput.focus();
+        autoResize();
     });
 
     document.querySelector(".attach-btn").addEventListener("click", () => {
@@ -571,10 +719,6 @@
     });
 
     document.getElementById("pdfInput").addEventListener("change", uploadPDF);
-
-    loadChatHistory();
-    userInput.focus();
-    autoResize();
 </script>
 
 </body>
