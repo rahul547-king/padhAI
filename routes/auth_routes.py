@@ -1,11 +1,14 @@
 from flask import Blueprint, jsonify, request, g
 from firebase_admin import auth
-from firebase.firebase_init import init_firebase
+
+# Local (this repo) firebase initializer
+from firebase_init import init_firebase
 
 auth_bp = Blueprint("auth", __name__)
 
-# make sure firebase is initialized once
+# init once
 init_firebase()
+
 
 def require_auth(fn):
     """Decorator: requires Authorization: Bearer <firebase_id_token>"""
@@ -22,8 +25,10 @@ def require_auth(fn):
             return jsonify({"error": "Invalid/expired token"}), 401
 
         return fn(*args, **kwargs)
+
     wrapper.__name__ = fn.__name__
     return wrapper
+
 
 @auth_bp.route("/login", methods=["POST"])
 def login():

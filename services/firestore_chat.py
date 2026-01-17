@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
-from firebase.firebase_init import get_db
+
+# Local (this repo)
+from firebase_init import get_db
 
 def _now():
     return datetime.now(timezone.utc)

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PadhAI • Quiz Dashboard</title>
+
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <link rel="stylesheet" href="/static/quiz_dashboard.css" />
+</head>
+<body>
+  <div class="qd-shell">
+
+    <!-- Top Bar -->
+    <header class="qd-topbar">
+      <div class="qd-brand">
+        <div class="qd-logo">PadhAI</div>
+        <div class="qd-sub">Quiz Dashboard</div>
+      </div>
+
+      <div class="qd-center">
+        <div class="qd-doc" id="qdDocBadge" style="display:none;">
+          <i class="fa-solid fa-file-pdf"></i>
+          <span id="qdDocName">document.pdf</span>
+        </div>
+
+        <div class="qd-doc-missing" id="qdDocMissing" style="display:none;">
+          No PDF selected. Go to Chat → Upload PDF → then open Quiz Dashboard.
+        </div>
+      </div>
+
+      <div class="qd-actions">
+        <button class="qd-icon-btn" id="qdThemeBtn" type="button" title="Toggle theme" aria-label="Toggle theme">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+        <a class="qd-btn qd-btn-ghost" href="/" title="Back to Chat">
+          <i class="fa-solid fa-comments"></i>
+          <span>Chat</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="qd-layout">
+
+      <!-- Left: Builder + Navigation -->
+      <aside class="qd-left">
+
+        <section class="qd-card">
+          <div class="qd-card-head">
+            <div class="qd-card-title">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              Create a quiz
+            </div>
+            <div class="qd-card-sub">Uses only your current PDF context.</div>
+          </div>
+
+          <div class="qd-form">
+            <div class="qd-field">
+              <label>Questions</label>
+              <div class="qd-input">
+                <i class="fa-solid fa-list-ol"></i>
+                <select id="qdCount">
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="20" selected>20</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="qd-field">
+              <label>Difficulty</label>
+              <div class="qd-input">
+                <i class="fa-solid fa-signal"></i>
+                <select id="qdDifficulty">
+                  <option value="Easy">Easy</option>
+                  <option value="Medium" selected>Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+            </div>
+
+            <button class="qd-btn qd-btn-primary" id="qdGenerateBtn" type="button">
+              <i class="fa-solid fa-bolt"></i>
+              Generate
+            </button>
+
+            <div class="qd-hint">
+              Answers are hidden until you submit for grading.
+            </div>
+          </div>
+        </section>
+
+        <section class="qd-card qd-meta" id="qdMetaCard" style="display:none;">
+          <div class="qd-meta-row">
+            <div class="k">Title</div><div class="v" id="qdMetaTitle">—</div>
+          </div>
+          <div class="qd-meta-row">
+            <div class="k">Difficulty</div><div class="v" id="qdMetaDiff">—</div>
+          </div>
+          <div class="qd-meta-row">
+            <div class="k">Time</div><div class="v" id="qdMetaTime">—</div>
+          </div>
+        </section>
+
+        <section class="qd-card" id="qdNavCard" style="display:none;">
+          <div class="qd-card-title">
+            <i class="fa-solid fa-table-cells-large"></i>
+            Navigation
+          </div>
+
+          <div class="qd-nav-grid" id="qdNavGrid"></div>
+
+          <div class="qd-legend">
+            <span><span class="dot dot-answered"></span>answered</span>
+            <span><span class="dot dot-marked"></span>marked</span>
+            <span><span class="dot dot-current"></span>current</span>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Right: Player / Results -->
+      <main class="qd-main">
+
+        <!-- Idle -->
+        <section class="qd-empty" id="qdEmpty">
+          <div class="qd-empty-hero"><i class="fa-solid fa-brain"></i></div>
+          <div class="qd-empty-title">Generate a quiz to begin</div>
+          <div class="qd-empty-sub">
+            Your quiz will appear here as a full exam-style workspace.
+          </div>
+        </section>
+
+        <!-- Player -->
+        <section class="qd-player" id="qdPlayer" style="display:none;">
+          <div class="qd-player-top">
+            <div class="qd-progress">
+              <div class="qd-progress-text" id="qdProgressText">Question 1 of 20</div>
+              <div class="qd-progress-bar">
+                <div class="qd-progress-fill" id="qdProgressFill" style="width:0%"></div>
+              </div>
+            </div>
+
+            <div class="qd-timer" id="qdTimer" style="display:none;">
+              <i class="fa-regular fa-clock"></i>
+              <span id="qdTimerText">00:00</span>
+            </div>
+          </div>
+
+          <div class="qd-qcard">
+            <div class="qd-qtop">
+              <div class="qd-chip" id="qdTypeChip">MCQ</div>
+              <button class="qd-btn qd-btn-ghost qd-btn-small" id="qdMarkBtn" type="button">
+                <i class="fa-regular fa-flag"></i>
+                Mark
+              </button>
+            </div>
+
+            <div class="qd-qtext" id="qdQuestionText">—</div>
+
+            <div class="qd-options" id="qdOptions"></div>
+
+            <div class="qd-short" id="qdShortWrap" style="display:none;">
+              <textarea id="qdShortInput" placeholder="Type your answer..."></textarea>
+            </div>
+          </div>
+
+          <div class="qd-player-bottom">
+            <button class="qd-btn qd-btn-ghost" id="qdPrevBtn" type="button">
+              <i class="fa-solid fa-arrow-left"></i>
+              Prev
+            </button>
+
+            <button class="qd-btn qd-btn-ghost" id="qdSaveBtn" type="button" title="Save answer">
+              <i class="fa-solid fa-floppy-disk"></i>
+              Save
+            </button>
+
+            <button class="qd-btn qd-btn-ghost" id="qdNextBtn" type="button">
+              Next
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+
+            <button class="qd-btn qd-btn-primary" id="qdSubmitBtn" type="button">
+              Submit
+              <i class="fa-solid fa-check"></i>
+            </button>
+          </div>
+        </section>
+
+        <!-- Results -->
+        <section class="qd-results" id="qdResults" style="display:none;">
+          <div class="qd-results-top">
+            <div class="qd-scorecard">
+              <div class="t">Score</div>
+              <div class="big" id="qdScoreBig">—</div>
+              <div class="sub" id="qdScoreSub">—</div>
+
+              <div class="qd-score-actions">
+                <button class="qd-btn qd-btn-primary" id="qdNewQuizBtn" type="button">
+                  <i class="fa-solid fa-rotate-right"></i>
+                  New Quiz
+                </button>
+                <button class="qd-btn qd-btn-ghost" id="qdScrollReviewBtn" type="button">
+                  <i class="fa-solid fa-list-check"></i>
+                  Review
+                </button>
+              </div>
+            </div>
+
+            <div class="qd-stats">
+              <div class="qd-stat">
+                <div class="k">Correct</div>
+                <div class="v" id="qdCorrect">—</div>
+              </div>
+              <div class="qd-stat">
+                <div class="k">Incorrect</div>
+                <div class="v" id="qdIncorrect">—</div>
+              </div>
+              <div class="qd-stat">
+                <div class="k">Total</div>
+                <div class="v" id="qdTotal">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="qd-review" id="qdReview"></div>
+        </section>
+
+      </main>
+    </div>
+
+    <!-- Toast -->
+    <div class="qd-toast-wrap" id="qdToast"></div>
+  </div>
+
+  <script src="/static/quiz_dashboard.js"></script>
+</body>
+</html>

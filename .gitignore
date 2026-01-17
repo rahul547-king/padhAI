@@ -1,6 +1,15 @@
+# Python
 venv/
 __pycache__/
 *.pyc
+
+# Secrets
 .env
-chat_history.json
 firebase_key.json
+chat_history.json
+
+# Vector DB / embeddings
+data/
+data/chroma/
+*.bin
+*.sqlite3
