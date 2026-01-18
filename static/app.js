@@ -14,6 +14,9 @@ const elements = {
   pdfUpload: document.getElementById("pdfUpload"),
   quizTrigger: document.getElementById("quizTrigger"),
 
+  // ✅ NEW: Flashcards button
+  flashTrigger: document.getElementById("flashTrigger"),
+
   newChatBtn: document.getElementById("newChatBtn"),
   collapseToggle: document.getElementById("collapseToggle"),
   sidebar: document.getElementById("sidebar"),
@@ -371,6 +374,22 @@ function goToQuizDashboard() {
   localStorage.setItem("currentDocName", currentDocName || "document.pdf");
 
   window.location.href = "/quiz";
+}
+
+/* -------------------------
+   ✅ Flashcards
+-------------------------- */
+function goToFlashcardsDashboard() {
+  if (!currentDocId) {
+    renderMessage("Please upload and select a PDF first.", "bot");
+    showToast("No document selected", "error");
+    return;
+  }
+
+  localStorage.setItem("currentDocId", currentDocId);
+  localStorage.setItem("currentDocName", currentDocName || "document.pdf");
+
+  window.location.href = "/cards";
 }
 
 /* -------------------------
@@ -748,6 +767,9 @@ on(elements.uploadTrigger, "click", () => elements.pdfUpload?.click());
 on(elements.pdfUpload, "change", uploadPDF);
 
 on(elements.quizTrigger, "click", goToQuizDashboard);
+
+// ✅ NEW: Flashcards click
+on(elements.flashTrigger, "click", goToFlashcardsDashboard);
 
 on(elements.newChatBtn, "click", startNewChat);
 on(elements.collapseToggle, "click", toggleSidebar);

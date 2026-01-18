@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PadhAI • Flashcards</title>
+
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <link rel="stylesheet" href="/static/flashcards_dashboard.css" />
+</head>
+<body>
+  <div class="fc-shell">
+
+    <header class="fc-topbar">
+      <div class="fc-brand">
+        <div class="fc-logo">PadhAI</div>
+        <div class="fc-sub">Flashcards</div>
+      </div>
+
+      <div class="fc-center">
+        <div class="fc-doc" id="fcDocBadge" style="display:none;">
+          <i class="fa-solid fa-file-pdf"></i>
+          <span id="fcDocName">document.pdf</span>
+        </div>
+        <div class="fc-doc-missing" id="fcDocMissing" style="display:none;">
+          No PDF selected. Go to Chat → Upload PDF → then open Flashcards.
+        </div>
+      </div>
+
+      <div class="fc-actions">
+        <button class="fc-icon-btn" id="fcThemeBtn" type="button" title="Toggle theme">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+        <a class="fc-btn fc-btn-ghost" href="/" title="Back to Chat">
+          <i class="fa-solid fa-comments"></i><span>Chat</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="fc-layout">
+      <aside class="fc-left">
+        <section class="fc-card">
+          <div class="fc-card-title">
+            <i class="fa-solid fa-layer-group"></i> Generate flashcards
+          </div>
+          <div class="fc-card-sub">Based only on your current PDF context.</div>
+
+          <div class="fc-form">
+            <div class="fc-field">
+              <label>Cards</label>
+              <div class="fc-input">
+                <i class="fa-solid fa-list-ol"></i>
+                <select id="fcCount">
+                  <option value="10">10</option>
+                  <option value="20" selected>20</option>
+                  <option value="30">30</option>
+                  <option value="40">40</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="fc-field">
+              <label>Mode</label>
+              <div class="fc-input">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <select id="fcMode">
+                  <option value="mixed" selected>Mixed</option>
+                  <option value="definitions">Definitions</option>
+                  <option value="qa">Q/A</option>
+                  <option value="cloze">Cloze (Fill in blank)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="fc-field">
+              <label>Difficulty</label>
+              <div class="fc-input">
+                <i class="fa-solid fa-signal"></i>
+                <select id="fcDifficulty">
+                  <option value="Easy">Easy</option>
+                  <option value="Medium" selected>Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+            </div>
+
+            <button class="fc-btn fc-btn-primary" id="fcGenerateBtn" type="button">
+              <i class="fa-solid fa-bolt"></i> Generate
+            </button>
+
+            <div class="fc-hint">Tip: use Again/Good/Easy for spaced repetition locally.</div>
+          </div>
+        </section>
+
+        <section class="fc-card" id="fcMetaCard" style="display:none;">
+          <div class="fc-meta-row"><div class="k">Title</div><div class="v" id="fcMetaTitle">—</div></div>
+          <div class="fc-meta-row"><div class="k">Mode</div><div class="v" id="fcMetaMode">—</div></div>
+          <div class="fc-meta-row"><div class="k">Difficulty</div><div class="v" id="fcMetaDiff">—</div></div>
+          <div class="fc-meta-row"><div class="k">Progress</div><div class="v" id="fcMetaProg">—</div></div>
+        </section>
+      </aside>
+
+      <main class="fc-main">
+        <section class="fc-empty" id="fcEmpty">
+          <div class="fc-empty-hero"><i class="fa-solid fa-clone"></i></div>
+          <div class="fc-empty-title">Generate flashcards to begin</div>
+          <div class="fc-empty-sub">Flip cards, mark difficulty, and drill fast.</div>
+        </section>
+
+        <section class="fc-player" id="fcPlayer" style="display:none;">
+          <div class="fc-player-top">
+            <div class="fc-progress">
+              <div class="fc-progress-text" id="fcProgressText">Card 1 of 20</div>
+              <div class="fc-progress-bar"><div class="fc-progress-fill" id="fcProgressFill" style="width:0%"></div></div>
+            </div>
+
+            <div class="fc-tags" id="fcTagPill" style="display:none;">
+              <i class="fa-solid fa-tag"></i>
+              <span id="fcTagText">General</span>
+            </div>
+          </div>
+
+          <div class="fc-flip" id="fcFlip">
+            <div class="fc-flip-inner" id="fcFlipInner">
+              <div class="fc-face fc-front">
+                <div class="fc-face-title">Front</div>
+                <div class="fc-face-text" id="fcFrontText">—</div>
+              </div>
+              <div class="fc-face fc-back">
+                <div class="fc-face-title">Back</div>
+                <div class="fc-face-text" id="fcBackText">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fc-controls">
+            <button class="fc-btn fc-btn-ghost" id="fcPrevBtn" type="button"><i class="fa-solid fa-arrow-left"></i> Prev</button>
+            <button class="fc-btn fc-btn-ghost" id="fcFlipBtn" type="button"><i class="fa-solid fa-rotate"></i> Flip</button>
+            <button class="fc-btn fc-btn-ghost" id="fcNextBtn" type="button">Next <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+
+          <div class="fc-srs">
+            <button class="fc-pill bad" id="fcAgainBtn" type="button">Again</button>
+            <button class="fc-pill" id="fcGoodBtn" type="button">Good</button>
+            <button class="fc-pill ok" id="fcEasyBtn" type="button">Easy</button>
+            <div class="fc-srs-note" id="fcSrsNote">—</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="fc-toast-wrap" id="fcToast"></div>
+  </div>
+
+  <script src="/static/flashcards_dashboard.js"></script>
+</body>
+</html>
